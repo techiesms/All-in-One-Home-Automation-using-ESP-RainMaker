@@ -1,21 +1,21 @@
 /*
- * 
- * This is the code for the project,
- * 
- * All in One Home Automation project using ESP RainMaker made using ESP32
- * 
- * This code was written by Arun Suthar for techiesms YouTube channel
- * 
- * This code is provided free for project purpose and fair use only.
- * Do mail us if you want to use it commercially 
- * 
- * techiesms@gmail.com
- * Copyrighted © by techiesms
- * 
- * 
- * Watch out it's complete tutorial on our YouTube channel 
- * https://www.YouTube.com/techiesms
- */
+
+   This is the code for the project,
+
+   All in One Home Automation project using ESP RainMaker made using ESP32
+
+   This code was written by Arun Suthar Modified by Sachin Soni for techiesms YouTube channel
+
+   This code is provided free for project purpose and fair use only.
+   Do mail us if you want to use it commercially
+
+   techiesms@gmail.com
+   Copyrighted © by techiesms
+
+
+   Watch out it's complete tutorial on our YouTube channel
+   https://www.YouTube.com/techiesms
+*/
 
 
 //This example demonstrates the ESP RainMaker with a standard Switch device.
@@ -75,9 +75,9 @@ bool switch_state_ch4 = false;
 
 
 int Slider_Value = 0;
-int curr_speed = 0;
-bool Fan_Switch = 0;
-bool wifi_scanning  = 0;
+int curr_speed = 1;
+bool fan_power = 0;
+
 
 
 static Switch my_switch1("light1", &relay1);
@@ -140,11 +140,10 @@ void write_callback(Device *device, Param *param, const param_val_t val, void *p
 
   if (strcmp(device_name, "Fan") == 0)
   {
-    if (strcmp(param_name, "Power") == 0)
-    {
-      Serial.printf("\nReceived value = %d for %s - %s\n", val.val.b, device_name, param_name);
-      Fan_Switch = val.val.b;
-      if (Fan_Switch) {
+    if (strcmp(param_name, "Power") == 0) {
+      Serial.printf("Received Fan power = %s for %s - %s\n", val.val.b ? "true" : "false", device_name, param_name);
+      fan_power = val.val.b;
+      if (fan_power) {
         if (curr_speed == 0)
         {
           speed_0();
@@ -168,40 +167,38 @@ void write_callback(Device *device, Param *param, const param_val_t val, void *p
       }
       else
         speed_0();
+      param->updateAndReport(val);
     }
+
 
     if (strcmp(param_name, "My_Speed") == 0)
     {
       Serial.printf("\nReceived value = %d for %s - %s\n", val.val.i, device_name, param_name);
       int Slider_Value = val.val.i;
-      if (Fan_Switch)
+      if (Slider_Value == 1)
       {
-        if (Slider_Value == 1)
-        {
-          speed_1();
-        }
-        if (Slider_Value == 2)
-        {
-          speed_2();
-        }
-        if (Slider_Value == 3)
-        {
-          speed_3();
-        }
-        if (Slider_Value == 4)
-        {
-          speed_4();
-        }
+        speed_1();
       }
-
+      if (Slider_Value == 2)
+      {
+        speed_2();
+      }
+      if (Slider_Value == 3)
+      {
+        speed_3();
+      }
+      if (Slider_Value == 4)
+      {
+        speed_4();
+      }
       if (Slider_Value == 0)
       {
         speed_0();
       }
       param->updateAndReport(val);
     }
-  }
 
+  }
   if (strcmp(device_name, "light1") == 0)
   {
     Serial.printf("Switch value_1 = %s\n", val.val.b ? "true" : "false");
@@ -303,22 +300,28 @@ void setup()
   level_param.addUIType(ESP_RMAKER_UI_SLIDER);
   my_fan.addParam(level_param);
   my_node.addDevice(my_fan);
+  my_fan.updateAndReportParam("My_Speed", 0);
+  my_fan.updateAndReportParam(ESP_RMAKER_DEF_POWER_NAME, fan_power);
   delay(500);
 
   my_switch1.addCb(write_callback);
   my_node.addDevice(my_switch1);
+  my_switch1.updateAndReportParam(ESP_RMAKER_DEF_POWER_NAME, switch_state_ch1);
   delay(500);
 
   my_switch2.addCb(write_callback);
   my_node.addDevice(my_switch2);
+  my_switch2.updateAndReportParam(ESP_RMAKER_DEF_POWER_NAME, switch_state_ch2);
   delay(500);
 
   my_switch3.addCb(write_callback);
   my_node.addDevice(my_switch3);
+  my_switch3.updateAndReportParam(ESP_RMAKER_DEF_POWER_NAME, switch_state_ch3);
   delay(500);
 
   my_switch4.addCb(write_callback);
   my_node.addDevice(my_switch4);
+  my_switch4.updateAndReportParam(ESP_RMAKER_DEF_POWER_NAME, switch_state_ch4);
   delay(500);
 
   //This is optional
@@ -336,18 +339,13 @@ void setup()
 
   WiFi.onEvent(sysProvEvent);
   WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM, WIFI_PROV_SECURITY_1, pop, service_name);
+
+
 }
 
 
 void loop()
 {
-
-  if (WiFi.status() != WL_CONNECTED && wifi_scanning == 1)
-  {
-    delay(500);
-    Serial.print(".");
-    WiFi.begin();
-  }
 
   button1.check();
   button2.check();
@@ -458,7 +456,9 @@ void speed_0()
 {
   //All Relays Off - Fan at speed 0
   if (DEBUG_SW)Serial.println("SPEED 0");
+  fan_power = 0;
   my_fan.updateAndReportParam("My_Speed", 0);
+  my_fan.updateAndReportParam("Power", fan_power);
   digitalWrite(Speed1, LOW);
   digitalWrite(Speed2, LOW);
   digitalWrite(Speed4, LOW);
@@ -470,7 +470,9 @@ void speed_1()
   //Speed1 Relay On - Fan at speed 1
   if (DEBUG_SW)Serial.println("SPEED 1");
   curr_speed = 1;
+  fan_power = 1;
   my_fan.updateAndReportParam("My_Speed", 1);
+  my_fan.updateAndReportParam("Power", fan_power);
   digitalWrite(Speed1, LOW);
   digitalWrite(Speed2, LOW);
   digitalWrite(Speed4, LOW);
@@ -483,7 +485,9 @@ void speed_2()
   //Speed2 Relay On - Fan at speed 2
   if (DEBUG_SW)Serial.println("SPEED 2");
   curr_speed = 2;
+  fan_power = 1;
   my_fan.updateAndReportParam("My_Speed", 2);
+  my_fan.updateAndReportParam("Power", fan_power);
   digitalWrite(Speed1, LOW);
   digitalWrite(Speed2, LOW);
   digitalWrite(Speed4, LOW);
@@ -496,7 +500,9 @@ void speed_3()
   //Speed1 & Speed2 Relays On - Fan at speed 3
   if (DEBUG_SW)Serial.println("SPEED 3");
   curr_speed = 3;
+  fan_power = 1;
   my_fan.updateAndReportParam("My_Speed", 3);
+  my_fan.updateAndReportParam("Power", fan_power);
   digitalWrite(Speed1, LOW);
   digitalWrite(Speed2, LOW);
   digitalWrite(Speed4, LOW);
@@ -511,7 +517,9 @@ void speed_4()
   //Speed4 Relay On - Fan at speed 4
   if (DEBUG_SW)Serial.println("SPEED 4");
   curr_speed = 4;
+  fan_power = 1;
   my_fan.updateAndReportParam("My_Speed", 4);
+  my_fan.updateAndReportParam("Power", fan_power);
   digitalWrite(Speed1, LOW);
   digitalWrite(Speed2, LOW);
   digitalWrite(Speed4, LOW);
